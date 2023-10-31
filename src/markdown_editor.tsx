@@ -12,21 +12,6 @@ export function MarkdownEditor() {
       return at;
     };
 
-    const findQueryEndOrCount = (
-      at: number,
-      target: string,
-      query: string,
-      count: number
-    ) => {
-      let seen = 0;
-      while (seen < count && at < target.length && target[at] === query) {
-        seen += Number(target[at] === query);
-        at++;
-      }
-
-      return at;
-    };
-
     const findQueryNext = (at: number, target: string, query: string) => {
       while (at < target.length && target[at] !== query) {
         at++;
@@ -53,24 +38,52 @@ export function MarkdownEditor() {
             const count = opening[1] - opening[0];
             const closing = [
               cursor,
-              findQueryEndOrCount(cursor, markdown, '*', count),
+              findQueryEnd(cursor, markdown, '*'),
             ];
+
+            // get extra asterisks at the beginning and end
+            let beginningExtra = 0;
+            let endExtra = 0;
+            if (count > closing[1] - closing[0]) {
+              beginningExtra = count - (closing[1] - closing[0]);
+            }
+            else if (count < closing[1] - closing[0]) {
+              endExtra = (closing[1] - closing[0]) - count;
+            }
 
             switch (Math.min(count, closing[1] - closing[0]) % 3) {
               case 0:
-                html += `<b><i>${markdown.substring(text[0], text[1])}</b></i>`;
+                html += '*'.repeat(beginningExtra) + `<b><i>${markdown.substring(text[0], text[1])}</b></i>` + '*'.repeat(endExtra);
                 break;
 
               case 1:
-                html += `<i>${markdown.substring(text[0], text[1])}</i>`;
+                html += '*'.repeat(beginningExtra) + `<i>${markdown.substring(text[0], text[1])}</i>` + '*'.repeat(endExtra);
                 break;
 
               case 2:
-                html += `<b>${markdown.substring(text[0], text[1])}</b>`;
+                html += '*'.repeat(beginningExtra) + `<b>${markdown.substring(text[0], text[1])}</b>` + '*'.repeat(endExtra);
                 break;
             }
+
+            cursor = closing[1];
+            continue;
+          }
+          else {
+              // no end tag found, revert the cursor and just add the asterisks to the html
+              html += markdown.substring(opening[0], opening[1]);
+              cursor = opening[1];
+              continue;
           }
         }
+        else {
+          // no end tag found, revert the cursor and just add the asterisks to the html
+          html += markdown.substring(opening[0], opening[1]);
+          cursor = opening[1];
+          continue;
+        }
+      }
+      else {
+        html += markdown[cursor];
       }
 
       cursor++;
@@ -81,10 +94,10 @@ export function MarkdownEditor() {
   };
 
   const markdownCheck = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === ' ' || e.key === 'Enter') {
+    //if (e.key === ' ' || e.key === 'Enter') {
       const input = window.getSelection()!.anchorNode!.parentNode!.textContent!;
       markdownToHTML(input);
-    }
+    //}
   };
 
   return (
